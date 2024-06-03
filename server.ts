@@ -1,5 +1,10 @@
-console.log("welcome api");
+import app from "./src/app";
 
-const test = () => {
-  console.log("test");
+const startServer = async () => {
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => {
+    console.log(`Server started on port ${port}`);
+  });
 };
+
+startServer();
