@@ -1,0 +1,24 @@
+{
+  "name": "elib",
+  "version": "1.0.0",
+  "description": "this is a ebook api project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "rest",
+    "api",
+    "express",
+    "ebook",
+    "mongo"
+  ],
+  "author": "zitu",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "nodemon": "^3.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
