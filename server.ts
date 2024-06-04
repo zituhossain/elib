@@ -6,7 +6,8 @@ const startServer = async () => {
   // Connect to database
   await connectDb();
 
-  const port = config.port || 3000;
+  const port = 3000;
+  // const port = config.port || 3000;
 
   app.listen(port, () => {
     console.log(`Server started on port ${port}`);
