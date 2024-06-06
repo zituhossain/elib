@@ -163,7 +163,9 @@ const deleteBook = async (req: Request, res: Response, next: NextFunction) => {
       resource_type: "raw",
     });
 
-    return res.sendStatus(204).json({ message: "Book deleted successfully" });
+    await bookModel.deleteOne({ _id: bookId });
+
+    return res.status(204).json({ message: "Book deleted successfully" });
   } catch (error) {
     return next(createHttpError(500, "Error while deleting book"));
   }
