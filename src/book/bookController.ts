@@ -46,4 +46,67 @@ const createBook = async (req: Request, res: Response, next: NextFunction) => {
   res.status(201).json({ id: newBook._id });
 };
 
-export { createBook };
+const updateBook = async (req: Request, res: Response, next: NextFunction) => {
+  const { id } = req.params;
+  const { title, genre } = req.body;
+
+  const files = req.files as any;
+  let coverImageUploadResult, bookFileUploadResult;
+
+  try {
+    const existingBook = await bookModel.findById(id);
+    if (!existingBook) {
+      return res.status(404).json({ message: "Book not found" });
+    }
+
+    // Upload new cover image if provided
+    if (files?.coverImage) {
+      const coverImagePath = files.coverImage[0].path;
+      const coverImageFileName = files.coverImage[0].filename;
+      coverImageUploadResult = await cloudinary.uploader.upload(
+        coverImagePath,
+        {
+          filename_override: coverImageFileName,
+          folder: "book-covers",
+        }
+      );
+      // Delete temporary file
+      await fs.promises.unlink(coverImagePath);
+    }
+
+    // Upload new book file if provided
+    if (files?.file) {
+      const bookFilePath = files.file[0].path;
+      const bookFileName = files.file[0].filename;
+      bookFileUploadResult = await cloudinary.uploader.upload(bookFilePath, {
+        resource_type: "raw",
+        filename_override: bookFileName,
+        folder: "book-pdfs",
+        format: "pdf",
+      });
+      // Delete temporary file
+      await fs.promises.unlink(bookFilePath);
+    }
+
+    const updatedBookData = {
+      title: title || existingBook.title,
+      genre: genre || existingBook.genre,
+      coverImage: coverImageUploadResult?.secure_url || existingBook.coverImage,
+      file: bookFileUploadResult?.secure_url || existingBook.file,
+    };
+
+    const updatedBook = await bookModel.findByIdAndUpdate(id, updatedBookData, {
+      new: true,
+    });
+
+    if (!updatedBook) {
+      return res.status(404).json({ message: "Book not found" });
+    }
+
+    res.status(200).json({ id: updatedBook._id });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export { createBook, updateBook };
