@@ -6,49 +6,70 @@ import bookModel from "./bookModel";
 import { CustomRequest } from "../middlewares/authenticate";
 
 const createBook = async (req: Request, res: Response, next: NextFunction) => {
-  const { title, genre } = req.body;
+  const { title, genre, description } = req.body;
 
   console.log("files", req.files);
 
   const files = req.files as any;
-  const fileName = files.coverImage[0].filename;
-  const filePath = files.coverImage[0].path;
 
-  const uploadResult = await cloudinary.uploader.upload(filePath, {
-    filename_override: fileName,
-    folder: "book-covers",
-  });
+  if (
+    !files ||
+    !files.coverImage ||
+    !files.coverImage[0] ||
+    !files.file ||
+    !files.file[0]
+  ) {
+    return next(
+      createHttpError(
+        400,
+        "Missing files. Please upload both cover image and book file."
+      )
+    );
+  }
 
-  const bookFileName = files.file[0].filename;
-  const bookFilePath = files.file[0].path;
+  try {
+    const coverImageFile = files.coverImage[0];
+    const bookFile = files.file[0];
 
-  const bookFileUploadResult = await cloudinary.uploader.upload(bookFilePath, {
-    resource_type: "raw",
-    filename_override: bookFileName,
-    folder: "book-pdfs",
-    format: "pdf",
-  });
+    const uploadResult = await cloudinary.uploader.upload(coverImageFile.path, {
+      filename_override: coverImageFile.filename,
+      folder: "book-covers",
+    });
 
-  const _req = req as CustomRequest;
+    const bookFileUploadResult = await cloudinary.uploader.upload(
+      bookFile.path,
+      {
+        resource_type: "raw",
+        filename_override: bookFile.filename,
+        folder: "book-pdfs",
+        format: "pdf",
+      }
+    );
 
-  const newBook = await bookModel.create({
-    title,
-    genre,
-    author: _req.userId,
-    coverImage: uploadResult.secure_url,
-    file: bookFileUploadResult.secure_url,
-  });
+    const _req = req as CustomRequest;
 
-  // Delete temporary files
-  await fs.promises.unlink(filePath);
-  await fs.promises.unlink(bookFilePath);
+    const newBook = await bookModel.create({
+      title,
+      genre,
+      description,
+      author: _req.userId,
+      coverImage: uploadResult.secure_url,
+      file: bookFileUploadResult.secure_url,
+    });
 
-  res.status(201).json({ id: newBook._id });
+    // Delete temporary files
+    await fs.promises.unlink(coverImageFile.path);
+    await fs.promises.unlink(bookFile.path);
+
+    res.status(201).json({ id: newBook._id });
+  } catch (error) {
+    next(error);
+  }
 };
 
 const updateBook = async (req: Request, res: Response, next: NextFunction) => {
   const { id } = req.params;
-  const { title, genre } = req.body;
+  const { title, genre, description } = req.body;
 
   const files = req.files as any;
   let coverImageUploadResult, bookFileUploadResult;
@@ -91,6 +112,7 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
     const updatedBookData = {
       title: title || existingBook.title,
       genre: genre || existingBook.genre,
+      descriptions: description || existingBook.description,
       coverImage: coverImageUploadResult?.secure_url || existingBook.coverImage,
       file: bookFileUploadResult?.secure_url || existingBook.file,
     };
@@ -111,7 +133,7 @@ const updateBook = async (req: Request, res: Response, next: NextFunction) => {
 
 const listBooks = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const books = await bookModel.find();
+    const books = await bookModel.find().populate("author", "name email");
     res.json(books);
   } catch (error) {
     return next(createHttpError(500, "Error while getting books"));
@@ -126,7 +148,9 @@ const getSingleBook = async (
   const bookId = req.params.id;
 
   try {
-    const book = await bookModel.findById(bookId);
+    const book = await bookModel
+      .findById(bookId)
+      .populate("author", "name email");
     if (!book) {
       return next(createHttpError(404, "Book not found"));
     }

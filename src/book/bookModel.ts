@@ -9,11 +9,15 @@ const bookSchema = new mongoose.Schema<Book>(
     },
     author: {
       type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
     },
     genre: {
       type: String,
       required: true,
+    },
+    description: {
+      type: String,
     },
     coverImage: {
       type: String,

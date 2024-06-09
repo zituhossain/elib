@@ -11,7 +11,7 @@ app.use(express.json());
 
 app.use(
   cors({
-    origin: config.frontendDomain,
+    // origin: config.frontendDomain,
   })
 );
 
